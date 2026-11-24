@@ -1,0 +1,263 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090d18">
+<title>LIVE CLIPPER AI</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#090d18;color:#fff;
+ font-family:Arial,sans-serif;
+ min-height:100vh;
+}
+header{
+ padding:22px 18px;border-bottom:1px solid #222b40;
+ display:flex;align-items:center;gap:12px;
+}
+.logo{
+ width:43px;height:43px;border-radius:13px;
+ background:linear-gradient(135deg,#7257ff,#00c9a7);
+ display:grid;place-items:center;font-size:23px;
+}
+header h1{font-size:19px;margin:0}
+header small{color:#8f9bb3}
+main{max-width:680px;margin:auto;padding:25px 17px}
+h2{font-size:27px;margin:10px 0}
+.subtitle{color:#9ba8c1;line-height:1.5}
+.panel{
+ background:#111a2b;border:1px solid #27334c;
+ border-radius:18px;padding:20px;margin-top:22px;
+}
+label{display:block;font-size:14px;margin:16px 0 9px;color:#c8d1e2}
+input,select{
+ width:100%;padding:15px;border-radius:11px;
+ border:1px solid #34425e;background:#0a1221;
+ color:white;font-size:15px;outline:none;
+}
+input:focus,select:focus{border-color:#8a72ff}
+button{
+ border:0;border-radius:11px;padding:15px;
+ font-size:15px;font-weight:bold;cursor:pointer;
+}
+.primary{
+ width:100%;margin-top:18px;color:white;
+ background:linear-gradient(100deg,#765cff,#5140d8);
+}
+.stop{
+ width:100%;margin-top:10px;background:#38202a;
+ color:#ff9ba9;border:1px solid #783647;
+}
+button:disabled{opacity:.45;cursor:not-allowed}
+.status{
+ display:flex;align-items:center;gap:10px;
+ padding:13px;background:#0a1221;
+ border-radius:10px;margin-top:17px;
+ color:#aebbd1;font-size:14px;
+}
+.dot{width:9px;height:9px;border-radius:50%;background:#8993a7}
+.dot.live{background:#19d69a;box-shadow:0 0 10px #19d69a}
+.platforms{
+ display:grid;grid-template-columns:repeat(3,1fr);
+ gap:9px;margin-top:13px;
+}
+.platform{
+ background:#0a1221;border:1px solid #27334c;
+ padding:12px 5px;text-align:center;
+ border-radius:10px;color:#bdc9dc;font-size:12px;
+}
+.info{
+ margin-top:17px;padding:13px;border-radius:10px;
+ background:#18243a;color:#9eacc5;
+ font-size:12px;line-height:1.5;
+}
+footer{text-align:center;color:#64718a;font-size:12px;padding:30px}
+</style>
+</head>
+
+<body>
+<header>
+ <div class="logo">✂️</div>
+ <div>
+  <h1>LIVE CLIPPER AI</h1>
+  <small>Tu directo. Tus mejores clips.</small>
+ </div>
+</header>
+
+<main>
+ <h2>Panel de captura</h2>
+ <p class="subtitle">
+ Pega el enlace de una transmisión en vivo.
+ LIVE CLIPPER AI podrá procesarla cuando el servidor esté conectado.
+ </p>
+
+ <section class="panel">
+  <label for="streamUrl">Enlace del directo</label>
+  <input id="streamUrl" type="url"
+   placeholder="https://www.youtube.com/live/..."
+   autocomplete="url">
+
+  <label for="platform">Plataforma</label>
+  <select id="platform">
+   <option value="auto">Detectar automáticamente</option>
+   <option value="youtube">YouTube</option>
+   <option value="twitch">Twitch</option>
+   <option value="tiktok">TikTok LIVE</option>
+   <option value="facebook">Facebook Live</option>
+   <option value="kick">Kick</option>
+   <option value="rumble">Rumble</option>
+  </select>
+
+  <label for="duration">Duración de los clips</label>
+  <select id="duration">
+   <option value="30">30 segundos</option>
+   <option value="60" selected>60 segundos</option>
+   <option value="90">90 segundos</option>
+  </select>
+
+  <label for="format">Formato</label>
+  <select id="format">
+   <option value="vertical">Vertical 9:16</option>
+   <option value="horizontal">Horizontal 16:9</option>
+  </select>
+
+  <button class="primary" id="startBtn" onclick="startCapture()">
+   ▶ INICIAR CAPTURA
+  </button>
+  <button class="stop" id="stopBtn" onclick="stopCapture()" disabled>
+   ■ DETENER CAPTURA
+  </button>
+
+  <div class="status">
+   <span class="dot" id="dot"></span>
+   <span id="statusText">Esperando un enlace...</span>
+  </div>
+
+  <div class="info" id="message">
+   El servidor de procesamiento debe estar conectado para iniciar
+   capturas reales. Esta página no descarga ni captura videos por sí sola.
+  </div>
+ </section>
+
+ <section class="panel">
+  <strong>Plataformas objetivo</strong>
+  <div class="platforms">
+   <div class="platform">▶ YouTube</div>
+   <div class="platform">🟣 Twitch</div>
+   <div class="platform">♪ TikTok</div>
+   <div class="platform">🔵 Facebook</div>
+   <div class="platform">🟢 Kick</div>
+   <div class="platform">🔴 Rumble</div>
+  </div>
+ </section>
+
+ <section class="panel">
+  <strong>Mis clips</strong>
+  <p class="subtitle" id="clips">
+   Todavía no hay clips disponibles.
+  </p>
+ </section>
+</main>
+
+<footer>LIVE CLIPPER AI · Panel privado</footer>
+
+<script>
+// Dirección del servidor. Se configurará en el siguiente paso.
+const API_BASE = "";
+
+let currentJob = null;
+
+function setStatus(text, live=false){
+ document.getElementById("statusText").textContent=text;
+ document.getElementById("dot").className=live?"dot live":"dot";
+}
+
+function detectPlatform(url){
+ const u=url.toLowerCase();
+ if(u.includes("youtube.com")||u.includes("youtu.be"))return "youtube";
+ if(u.includes("twitch.tv"))return "twitch";
+ if(u.includes("tiktok.com"))return "tiktok";
+ if(u.includes("facebook.com")||u.includes("fb.watch"))return "facebook";
+ if(u.includes("kick.com"))return "kick";
+ if(u.includes("rumble.com"))return "rumble";
+ return null;
+}
+
+async function startCapture(){
+ const url=document.getElementById("streamUrl").value.trim();
+ const selected=document.getElementById("platform").value;
+ const platform=selected==="auto"?detectPlatform(url):selected;
+
+ if(!url){
+  alert("Pega primero el enlace del directo.");
+  return;
+ }
+ try{
+  const parsed=new URL(url);
+  if(!["http:","https:"].includes(parsed.protocol))throw Error();
+ }catch(e){
+  alert("Introduce un enlace web válido.");
+  return;
+ }
+
+ if(!platform){
+  alert("No pude reconocer la plataforma. Selecciónala manualmente.");
+  return;
+ }
+
+ if(!API_BASE){
+  setStatus("Servidor todavía no conectado");
+  document.getElementById("message").textContent=
+   "La interfaz está lista, pero falta conectar el servidor de captura. No se ha iniciado ninguna transmisión.";
+  return;
+ }
+
+ const btn=document.getElementById("startBtn");
+ btn.disabled=true;
+ setStatus("Conectando con el servidor...");
+
+ try{
+  const response=await fetch(API_BASE+"/api/jobs",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+    url,platform,
+    duration:Number(document.getElementById("duration").value),
+    format:document.getElementById("format").value
+   })
+  });
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||"No se pudo iniciar");
+  currentJob=data.id;
+  setStatus("Captura activa",true);
+  document.getElementById("message").textContent=
+   "El servidor está procesando el directo.";
+  document.getElementById("stopBtn").disabled=false;
+ }catch(e){
+  setStatus("No se pudo iniciar");
+  document.getElementById("message").textContent=e.message;
+ }finally{
+  btn.disabled=false;
+ }
+}
+
+async function stopCapture(){
+ if(!currentJob||!API_BASE)return;
+ try{
+  const response=await fetch(API_BASE+"/api/jobs/"+encodeURIComponent(currentJob)+"/stop",{
+   method:"POST"
+  });
+  if(!response.ok)throw Error("No se pudo detener");
+  currentJob=null;
+  setStatus("Captura detenida");
+  document.getElementById("stopBtn").disabled=true;
+ }catch(e){
+  alert(e.message);
+ }
+}
+</script>
+</body>
+</html>
