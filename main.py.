@@ -166,5 +166,5 @@ def get_job(job_id: str):
         return {
             "id": job["id"],
             "status": job["status"],
-            "error": job.get("error")
+           "error": job.get("error")
         }
